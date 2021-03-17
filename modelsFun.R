@@ -49,7 +49,7 @@ export_aovNice <- function (tab, newNames = ""){
   # Change them with user-input newNames (order matters!)
   if (all(newNames != "")){ # only if an input is given
     #print(all(newNames != ""))
-    varNames <- grep("^[a-zA-Z0-9]+(_R)*$", tab$Effect, value = T) # detect the main effects
+    varNames <- grep("^[a-zA-Z0-9\\.]+(_)*[a-zA-Z]+$", tab$Effect, value = T) # detect the main effects
     #print(varNames)
     for (i in 1:length(varNames)){ # loop over the old names ans change them with newNames
       tab[,"Effect"] <- gsub(varNames[i], newNames[i],tab[,"Effect"])
@@ -126,6 +126,36 @@ sequence_relation <- function(d, variab, blockLength, suffix = "R", type = "othe
   return(d)
 }
 
+
+# new seq relation without trial num
+sequence_relation_new <- function(d, variab, maxTrialNum, suffix = "R", type = "other", Lag = 1, values = "0,1"){
+  for (var in variab){
+    varName <- paste(var, suffix, sep="_")
+    #print(d[1:10,var])
+    d[[varName]] <- 99
+    for (j in unique(d$pp)){
+      for (jj in unique(d$blockNum)){
+        strt = min(which(d$pp == j & d$blockNum == jj))+Lag #no for 1st/2nd trial in each block
+        lungh = length(which(d$pp == j & d$blockNum == jj))
+        end = strt+lungh-(Lag+1)
+        for (i in strt:end){
+          if (type == "error"){if (d[i-Lag, var] == 1){d[[varName]][i] <- 1} else {d[[varName]][i] <- 0}}
+          else{
+            if (values == "0,1"){ # if you want 0 and 1 coding
+              if (d[i, var] == d[i-Lag, var]){d[[varName]][i] <- 0} else {d[[varName]][i] <- 1}
+            } else if (values == "center"){ # if you want to center predictors
+              if (d[i, var] == d[i-Lag, var]){d[[varName]][i] <- 0.5} else {d[[varName]][i] <- - 0.5}
+            }
+          }
+        }
+      }
+    }
+    # print table to see results
+    print(table(d[[varName]]))
+    #tests, must be all 0s
+  }
+  return(d)
+}
 # group_my ----------------------------------------------------------------------
 
 group_my <- function(d, dv, ...){
