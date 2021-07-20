@@ -75,7 +75,8 @@ ICC}
 # than the maximun number of d rows if the error was in the last trial last block!
 
 sequence_relation <- function(d, variab, blockLength, suffix = "R", type = "other", Lag = 1, values = "0,1"){
-  if (min(d$trialNum) == 0){maxTrialNum = blockLength - 1 }
+  if (min(d$trialNum) == 0){maxTrialNum = blockLength - 1
+  } else {maxTrialNum = blockLength}
   for (var in variab){
     varName <- paste(var, suffix, sep="_")
     #print(d[1:10,var])
@@ -128,7 +129,7 @@ sequence_relation <- function(d, variab, blockLength, suffix = "R", type = "othe
 
 
 # new seq relation without trial num
-sequence_relation_new <- function(d, variab, maxTrialNum, suffix = "R", type = "other", Lag = 1, values = "0,1"){
+sequence_relation_new <- function(d, variab, suffix = "R", type = "other", Lag = 1, values = c(0,1)){
   for (var in variab){
     varName <- paste(var, suffix, sep="_")
     #print(d[1:10,var])
@@ -138,13 +139,21 @@ sequence_relation_new <- function(d, variab, maxTrialNum, suffix = "R", type = "
         strt = min(which(d$pp == j & d$blockNum == jj))+Lag #no for 1st/2nd trial in each block
         lungh = length(which(d$pp == j & d$blockNum == jj))
         end = strt+lungh-(Lag+1)
+        # loop pver the df
         for (i in strt:end){
           if (type == "error"){if (d[i-Lag, var] == 1){d[[varName]][i] <- 1} else {d[[varName]][i] <- 0}}
           else{
-            if (values == "0,1"){ # if you want 0 and 1 coding
-              if (d[i, var] == d[i-Lag, var]){d[[varName]][i] <- 0} else {d[[varName]][i] <- 1}
-            } else if (values == "center"){ # if you want to center predictors
-              if (d[i, var] == d[i-Lag, var]){d[[varName]][i] <- 0.5} else {d[[varName]][i] <- - 0.5}
+             if (values[1] == "center"){ # if you want to center predictors
+              if (d[i, var] == d[i-Lag, var]){d[[varName]][i] <- 0.5} else {d[[varName]][i] <- - 0.5
+              }
+             }
+               # if vector given 
+              else { # if you want 0 and 1 coding
+                if (d[i, var] == d[i-Lag, var]){
+                  d[[varName]][i] <- values[1]
+                } else {
+                  d[[varName]][i] <- values[2]
+                }
             }
           }
         }
@@ -237,3 +246,9 @@ postHoc.output <- function (postHocLst, correction = "bonferroni"){
   }
   postHocDf
  }
+
+
+# Custom ggplot2 them
+my_theme <- theme_minimal() + theme(axis.title = element_text(face = "bold", colour = "black"),
+                                    text = element_text(size=16, family="serif", colour = "black"),
+                                    axis.line = element_line(colour = "black"))
