@@ -1,5 +1,7 @@
 # Useful functions
 
+library(data.table)
+
 # From logOR to probability --------------------------------------------
 
 logOdd2Prob <- function (logOdd) {
@@ -59,6 +61,85 @@ export_aovNice <- function (tab, newNames = ""){
   tab[,"Effect"] <- gsub(":", " x ", tab[, "Effect"]) 
   # Return the table
   tab
+}
+
+# ------------------ Write aov nice results in Word docx ---------------------------------------
+
+
+write_results <- function(aov_nice, varsVec, dv, B, path = ""){
+  
+  nicer <- export_aovNice(aov_nice, varsVec)
+  
+  nicer$p.value[nicer$p.value == "<.001"] <- ".0005"
+  nicer$p.value <- as.numeric(sub(".", "0.", nicer$p.value))
+  nicer$F <- as.numeric(nicer$F)
+  
+  # prepare text types
+  normale <- fp_text(font.size = 12, font.family = "Times New Roman")
+  ita <- fp_text(italic = TRUE, font.size = 12, font.family = "Times New Roman")
+  subscr <- fp_text(font.size = 12, vertical.align = "subscript", font.family = "Times New Roman")
+  superscr <- fp_text(font.size = 12, vertical.align = "superscript", font.family = "Times New Roman")
+  
+  doc <- read_docx()
+  
+  for (i in 1:length(aov_nice$Effect)){
+    
+    sign <- ""
+    
+    if (nicer[i, "p.value"] > 0.05) {
+      sign <- "NOT "
+    } 
+    
+    if (length(grep("(.)+x\\s(.)+", nicer[i, "Effect"])) != 0){
+      ftext1 <- ftext(paste0("The interaction of ", nicer[i, "Effect"], " was ", sign, "significant, "), normale)
+    } else {
+      ftext1 <- ftext(paste0("The main effect of ", nicer[i, "Effect"], " was ", sign, "significant, "), normale)
+    }
+    
+    ftext2 <- ftext("F", ita)
+    ftext3 <- ftext(paste0("(", strsplit(nicer$df[1], " ")[[1]][1], ", ",
+                           strsplit(nicer$df[1], " ")[[1]][2], ") = ", nicer[i, "F"], ", "), normale)
+    ftext4 <- ftext("p ", ita)
+    
+    # if  p value < .001 write < .001
+    if (nicer[i, "p.value"] < 0.001){
+      valuee <- " < .001"
+    } else {
+      valuee <- paste0(" = ", sub("0.", ".", nicer[i, "p.value"]))
+    }
+      
+    ftext5 <- ftext(paste0(valuee, ", petasq") , normale)
+    littlep <- ftext("p" , subscr)
+    apix2 <- ftext("2 ", superscr)
+    ftext6 <- ftext(paste0(" = ", nicer[i, "Partial Eta Sq."]) , normale)
+    
+    # no other main effect or interaction was significant
+    
+    minF <- as.character(min(nicer[nicer$p.value > 0.05, "F"])) 
+    maxp <- as.character(max(nicer[nicer$p.value > 0.05, "p.value"]))
+    
+    ftext7 <- ftext(" No other main effect or interaction was significant (all ", normale)
+    ftext8 <- ftext(paste0("s < ", minF, ", all "), normale)
+    ftext9 <- ftext(paste0("s > ", maxp, ")."), normale)
+    
+    paragraph <- fpar(ftext1, ftext2, ftext3, ftext4, ftext5, littlep, apix2, ftext6
+                      #,ftext7, ftext2, ftext8, ftext4, ftext9
+                      )
+    # add to last round only 
+    if (i == length(aov_nice$Effect)){
+      
+      paragraph <- fpar(ftext1, ftext2, ftext3, ftext4, ftext5, littlep, apix2, ftext6
+                        ,ftext7, ftext2, ftext8, ftext4, ftext9
+      )
+    }
+    
+    doc <- body_add_fpar(doc, paragraph)
+    
+    #print(nicer[i, "Effect"])
+  }
+  
+  print(doc, target = paste0(path, "manuscript/", B, "_results", dv, ".docx"))
+  
 }
 
 # Compute ICC -------------------------------------------------------------------------
@@ -165,6 +246,7 @@ sequence_relation_new <- function(d, variab, suffix = "R", type = "other", Lag =
   }
   return(d)
 }
+
 # group_my ----------------------------------------------------------------------
 
 group_my <- function(d, dv, ...){
@@ -172,8 +254,8 @@ group_my <- function(d, dv, ...){
   dv <- enquo(dv)
   colName <- paste0("mean", quo_name(dv))
   print(paste0("The generated column containing the means is called: ", colName))
-    d %>% group_by(!!!groupVar) %>% 
-      summarise(!!colName := mean(!!dv), n = n(), se := sd(!!dv)/sqrt(n))%>% ungroup() 
+    d %>% dplyr::group_by(!!!groupVar) %>% 
+      dplyr::summarise(!!colName := mean(!!dv), n = n(), se := sd(!!dv)/sqrt(n))%>% dplyr::ungroup() 
 }
 
 # Prompt a Question ------------------------------------------------
@@ -248,7 +330,7 @@ postHoc.output <- function (postHocLst, correction = "bonferroni"){
  }
 
 
-# Custom ggplot2 them
+# Custom ggplot2 themev --------------
 my_theme <- theme_minimal() + theme(axis.title = element_text(face = "bold", colour = "black"),
                                     text = element_text(size=16, family="serif", colour = "black"),
                                     axis.line = element_line(colour = "black"))
