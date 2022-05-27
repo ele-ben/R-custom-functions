@@ -70,9 +70,19 @@ write_results <- function(aov_nice, varsVec, dv, B, path = ""){
   
   nicer <- export_aovNice(aov_nice, varsVec)
   
+  # render numbers columns numeric
+  
   nicer$p.value[nicer$p.value == "<.001"] <- ".0005"
   nicer$p.value <- as.numeric(sub(".", "0.", nicer$p.value))
+  
   nicer$F <- as.numeric(nicer$F)
+  
+  names(nicer)[names(nicer) == "Partial Eta Sq."] <- "pes"
+  
+  nicer$pes[nicer$pes == "<.001"] <- ".0005"
+  nicer$pes <- as.numeric(sub(".", "0.", nicer$pes))
+  
+  names(nicer)[names(nicer) == "pes"] <- "Partial Eta Sq."
   
   # prepare text types
   normale <- fp_text(font.size = 12, font.family = "Times New Roman")
@@ -99,7 +109,7 @@ write_results <- function(aov_nice, varsVec, dv, B, path = ""){
     ftext2 <- ftext("F", ita)
     ftext3 <- ftext(paste0("(", strsplit(nicer$df[1], " ")[[1]][1], ", ",
                            strsplit(nicer$df[1], " ")[[1]][2], ") = ", nicer[i, "F"], ", "), normale)
-    ftext4 <- ftext("p ", ita)
+    ftext4 <- ftext("p", ita)
     
     # if  p value < .001 write < .001
     if (nicer[i, "p.value"] < 0.001){
@@ -110,17 +120,17 @@ write_results <- function(aov_nice, varsVec, dv, B, path = ""){
       
     ftext5 <- ftext(paste0(valuee, ", petasq") , normale)
     littlep <- ftext("p" , subscr)
-    apix2 <- ftext("2 ", superscr)
-    ftext6 <- ftext(paste0(" = ", nicer[i, "Partial Eta Sq."]) , normale)
+    apix2 <- ftext("2", superscr)
+    ftext6 <- ftext(paste0(" = ", round(nicer[i, "Partial Eta Sq."],2)) , normale)
     
     # no other main effect or interaction was significant
     
-    minF <- as.character(min(nicer[nicer$p.value > 0.05, "F"])) 
-    maxp <- as.character(max(nicer[nicer$p.value > 0.05, "p.value"]))
+    maxF <- as.character(max(nicer[nicer$p.value > 0.05, "F"])) 
+    minp <- as.character(min(nicer[nicer$p.value > 0.05, "p.value"]))
     
     ftext7 <- ftext(" No other main effect or interaction was significant (all ", normale)
-    ftext8 <- ftext(paste0("s < ", minF, ", all "), normale)
-    ftext9 <- ftext(paste0("s > ", maxp, ")."), normale)
+    ftext8 <- ftext(paste0("s < ", maxF, ", all "), normale)
+    ftext9 <- ftext(paste0("s > ", minp, ")."), normale)
     
     paragraph <- fpar(ftext1, ftext2, ftext3, ftext4, ftext5, littlep, apix2, ftext6
                       #,ftext7, ftext2, ftext8, ftext4, ftext9
@@ -138,7 +148,7 @@ write_results <- function(aov_nice, varsVec, dv, B, path = ""){
     #print(nicer[i, "Effect"])
   }
   
-  print(doc, target = paste0(path, "manuscript/", B, "_results", dv, ".docx"))
+  print(doc, target = paste0(path, "manuscript//", B, "_results", dv, ".docx"))
   
 }
 
@@ -240,6 +250,27 @@ sequence_relation_new <- function(d, variab, suffix = "R", type = "other", Lag =
         }
       }
     }
+    # print table to see results
+    print(table(d[[varName]]))
+    #tests, must be all 0s
+  }
+  return(d)
+}
+
+# new seq relation with lag and ifelsew and trialNum
+sequence_relation_lag <- function(d, variab, suffix = "rep", type = "other", Lag = 1, sw_rep_label = c(0,1)){
+  for (var in variab){
+    varName <- paste(var, suffix, sep="_")
+    #print(d[1:10,var])
+    d[[varName]] <- as.numeric(d[[var]] == lag(d[[var]]))
+    
+    # Rename?
+    if (!all(sw_rep_label == c(0,1))){
+      d[[varName]] <- ifelse(d[[varName]] == 0, sw_rep_label[1], sw_rep_label[2])
+    }
+    
+    d[d$trialNum == 1, varName] <- 99
+    
     # print table to see results
     print(table(d[[varName]]))
     #tests, must be all 0s
