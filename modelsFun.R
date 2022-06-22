@@ -262,12 +262,19 @@ sequence_relation_lag <- function(d, variab, suffix = "rep", type = "other", Lag
   for (var in variab){
     varName <- paste(var, suffix, sep="_")
     #print(d[1:10,var])
-    d[[varName]] <- as.numeric(d[[var]] == lag(d[[var]]))
-    
-    # Rename?
-    if (!all(sw_rep_label == c(0,1))){
-      d[[varName]] <- ifelse(d[[varName]] == 0, sw_rep_label[1], sw_rep_label[2])
-    }
+    if (type != "error"){
+      
+      d[[varName]] <- as.numeric(d[[var]] == lag(d[[var]]))
+      # Rename?
+      if (!all(sw_rep_label == c(0,1))){
+        d[[varName]] <- ifelse(d[[varName]] == 0, sw_rep_label[1], sw_rep_label[2])
+      }
+      
+    } else if (type == "error"){
+      
+      d[[varName]] <- lag(d[[var]])
+      
+      }
     
     d[d$trialNum == 1, varName] <- 99
     
